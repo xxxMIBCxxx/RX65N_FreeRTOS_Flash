@@ -155,7 +155,8 @@ void Task_Fwupdate(void * pvParameters)
 	eFlashResult = R_FLASH_Control(FLASH_CMD_ACCESSWINDOW_SET, (void *)&g_AccessWindowInfo[g_tFwupdate.eBankInfo]);
 	if (eFlashResult != FLASH_SUCCESS)
 	{
-		printf("R_FLASH_Control(FLASH_CMD_ACCESSWINDOW_SET) Error. [eFlashResult:%d]\n",eFlashResult);
+		printf("R_FLASH_Control(FLASH_CMD_ACCESSWINDOW_SET) Error. [eFlashResult:%d, StartAddress:%08X, EndAddress:%08X]\n",
+													eFlashResult, g_AccessWindowInfo[g_tFwupdate.eBankInfo].start_addr, g_AccessWindowInfo[g_tFwupdate.eBankInfo].end_addr);
 		g_tGlobalInfo.eLedKind = LED_KIND_ERROR;
 		goto Task_Fwupdate_EndProc_Label;
 	}
@@ -178,7 +179,6 @@ void Task_Fwupdate(void * pvParameters)
 	eResult = MotorolaStypeAnalyze(&file, 1, CfWriteOffsetAddress);
 	if (eResult == MOTOROLA_STYPE_RESULT_SUCCESS)
 	{
-#if 0
 		// 起動バンク変更
 		eFlashResult = R_FLASH_Control(FLASH_CMD_BANK_TOGGLE, NULL);
 		if (eFlashResult != FLASH_SUCCESS)
@@ -187,7 +187,7 @@ void Task_Fwupdate(void * pvParameters)
 			g_tGlobalInfo.eLedKind = LED_KIND_ERROR;
 			goto Task_Fwupdate_EndProc_Label;
 		}
-#endif
+
 		// @@@ 書き換え終了 @@@
 		printf("Update Success!!\n");
 		g_tGlobalInfo.eLedKind = LED_KIND_ON;
@@ -203,21 +203,5 @@ Task_Fwupdate_EndProc_Label:
 	while(1)
 	{
 		vTaskDelay(100);
-		if (PORTA.PIDR.BIT.B2 == 0)
-		{
-			// 起動バンク変更
-			eFlashResult = R_FLASH_Control(FLASH_CMD_BANK_TOGGLE, NULL);
-			if (eFlashResult != FLASH_SUCCESS)
-			{
-				printf("R_FLASH_Control(FLASH_CMD_BANK_TOGGLE) Error. [eFlashResult:%d]\n",eFlashResult);
-				g_tGlobalInfo.eLedKind = LED_KIND_ERROR;
-				goto Task_Fwupdate_EndProc_Label;
-			}
-
-			while(1)
-			{
-				vTaskDelay(1000);
-			}
-		}
 	}
 }

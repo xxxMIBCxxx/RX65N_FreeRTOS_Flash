@@ -9,7 +9,7 @@
 #define LENGTH_SIZE									( 2 )
 #define CHECK_SUM_SIZE								( 2 )
 #define	NEW_LINE_SIZE								( 2 )
-#define CF_WRITE_MIN_SIZE							( 128 )		// 最小プログラムサイズ(BYTE)
+#define CF_WRITE_MIN_SIZE							( 128 ) 	// 最小プログラムサイズ(BYTE)
 
 
 //-----------------------------------------------
@@ -31,10 +31,10 @@ typedef enum
 //-----------------------------------------------
 typedef struct
 {
-	unsigned int									StartAddress;	// 書込み開始アドレス
-	unsigned int									EndAddress;		// 書込み開始アドレス
+	uint32_t  										StartAddress;	// 書込み開始アドレス
+	uint32_t										EndAddress;		// 書込み開始アドレス
 
-	unsigned char									Data[CF_WRITE_MIN_SIZE];
+	uint8_t											Data[CF_WRITE_MIN_SIZE];
 
 } CF_WRITE_INFO_TABLE;
 
@@ -58,9 +58,9 @@ typedef enum
 //-----------------------------------------------
 typedef struct
 {
-	unsigned int			Address;							// ロード・アドレス
-	unsigned char			DataSize;							// データ長
-	unsigned char			Data[99];							// 書込みデータ
+	uint32_t				Address;							// ロード・アドレス
+	uint8_t					DataSize;							// データ長
+	uint8_t					Data[99];							// 書込みデータ
 } FLASH_INFO_TABLE;
 
 

@@ -8,7 +8,7 @@ extern GLOBAL_INFO_TABLE			g_tGlobalInfo;
 
 //#define DEBUG_PRINTF_DUMP
 
-#define CF_CLEAR_NUM				( 0xFF )
+#define CF_CLEAR_NUM				( 0x00 )
 
 
 // プロトタイプ宣言
@@ -21,7 +21,7 @@ static uint8_t Analyze_S0(FIL *pFile, S_TYPE_RECORD_TABLE* ptStypeRecord);
 static uint8_t Analyze_S3(FIL *pFile, S_TYPE_RECORD_TABLE* ptStypeRecord, FLASH_INFO_TABLE* ptFlashInfo);
 static uint8_t Analyze_S7(FIL *pFile, S_TYPE_RECORD_TABLE* ptStypeRecord);
 #ifdef DEBUG_PRINTF_DUMP
-static void DebugDump(CF_WRITE_INFO_TABLE* ptCfWriteInfo);
+static void DebugDump(CF_WRITE_INFO_TABLE* ptCfWriteInfo, uint32_t CfWriteOffsetAddress);
 #endif // DEBUG_PRINTF_DUMP
 static MOTOROLA_STYPE_RESULT_ENUM CF_Write(CF_WRITE_INFO_TABLE* ptCfWriteInfo, uint32_t CfWriteOffsetAddress);
 
@@ -135,7 +135,7 @@ MOTOROLA_STYPE_RESULT_ENUM MotorolaStypeAnalyze(FIL *pFile, uint8_t bWriteFlag, 
 				}
 
 				// 1Byteずつ、CF書込み範囲を超えていないかチェックする
-				for (unsigned int i = 0; i < g_MotorolaInfo.tFlashInfo.DataSize; i++)
+				for (uint32_t i = 0; i < g_MotorolaInfo.tFlashInfo.DataSize; i++)
 				{
 					if (g_MotorolaInfo.tCfWriteInfo.EndAddress >= (g_MotorolaInfo.tFlashInfo.Address + i))
 					{
@@ -570,14 +570,25 @@ static uint8_t Analyze_S7(FIL *pFile, S_TYPE_RECORD_TABLE* ptStypeRecord)
 // コードフラッシュ書き込みデータ表示(DEBUG用)
 //-----------------------------------------------------------------------------
 #ifdef DEBUG_PRINTF_DUMP
-static void DebugDump(CF_WRITE_INFO_TABLE* ptCfWriteInfo)
+static void DebugDump(CF_WRITE_INFO_TABLE* ptCfWriteInfo, uint32_t CfWriteOffsetAddress)
 {
+	uint32_t						WriteAddress = 0x00000000;
+
+	if ((FLASH_CF_LO_BANK_LO_ADDR <= ptCfWriteInfo->StartAddress) && (FLASH_CF_LO_BANK_HI_ADDR >= ptCfWriteInfo->StartAddress))
+	{
+		WriteAddress = ptCfWriteInfo->StartAddress + CfWriteOffsetAddress;
+	}
+	else
+	{
+		WriteAddress = ptCfWriteInfo->StartAddress;
+	}
+
 	printf("---[CF_WRITE_INFO]--------------------------------------------------------\n");
 
 
 	for (unsigned int j = 0; j < (CF_WRITE_MIN_SIZE / 16); j++)
 	{
-		printf("[%08p] : ", (ptCfWriteInfo->StartAddress + (16 * j)));
+		printf("[%08X (%08X)] : ", (WriteAddress+ (16 * j)), (ptCfWriteInfo->StartAddress + (16 * j)));
 		for (unsigned int i = 0; i < 16; i++)
 		{
 			printf("%02X ", ptCfWriteInfo->Data[(16 * j) + i]);
@@ -595,26 +606,37 @@ static void DebugDump(CF_WRITE_INFO_TABLE* ptCfWriteInfo)
 static MOTOROLA_STYPE_RESULT_ENUM CF_Write(CF_WRITE_INFO_TABLE* ptCfWriteInfo, uint32_t CfWriteOffsetAddress)
 {
 	flash_err_t						eFlashResult = FLASH_SUCCESS;
-
+	uint32_t						WriteAddress = 0x00000000;
 
 #ifdef DEBUG_PRINTF_DUMP
 	// コードフラッシュ書き込みデータ表示(DEBUG用)
-	DebugDump(&g_MotorolaInfo.tCfWriteInfo);
+	DebugDump(ptCfWriteInfo,CfWriteOffsetAddress);
 #endif	// #if DEBUG_PRINTF_DUMP
 
+#if 1
+	if ((FLASH_CF_LO_BANK_LO_ADDR <= ptCfWriteInfo->StartAddress) && (FLASH_CF_LO_BANK_HI_ADDR >= ptCfWriteInfo->StartAddress))
+	{
+		WriteAddress = ptCfWriteInfo->StartAddress + CfWriteOffsetAddress;
+	}
+	else
+	{
+		WriteAddress = ptCfWriteInfo->StartAddress;
+	}
+
 	// プログラムコード以外は書き込まない
-	if (FLASH_CF_LO_BANK_LO_ADDR > (ptCfWriteInfo->StartAddress + CfWriteOffsetAddress))
+	if (FLASH_CF_LO_BANK_LO_ADDR > WriteAddress)
 	{
 		return MOTOROLA_STYPE_RESULT_SUCCESS;
 	}
 
 	// コードフラッシュ書き込み
-	eFlashResult = R_FLASH_Write(ptCfWriteInfo->Data,(ptCfWriteInfo->StartAddress + CfWriteOffsetAddress),CF_WRITE_MIN_SIZE);
+	eFlashResult = R_FLASH_Write(ptCfWriteInfo->Data, WriteAddress, CF_WRITE_MIN_SIZE);
 	if (eFlashResult != FLASH_SUCCESS)
 	{
-		printf("R_FLASH_Write Error. [eFlashResult:%d, Address:%08X]\n",eFlashResult,(ptCfWriteInfo->StartAddress + CfWriteOffsetAddress));
+		printf("R_FLASH_Write Error. [eFlashResult:%d, Address:%08X]\n",eFlashResult,WriteAddress);
 		return MOTOROLA_STYPE_RESULT_ERROR_FLASH_WRITE;
 	}
+#endif
 
 	return MOTOROLA_STYPE_RESULT_SUCCESS;
 }
